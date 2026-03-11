@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { PathSelector } from "./PathSelector";
-import { useCameraPathsStore } from "../stores/cameraPathsStore";
+import { useActivePath, useCameraPathsStore } from "../stores/cameraPathsStore";
 import { useVisibleItemsStore } from "../stores/visibleItemsStore";
 
 interface UIOverlayProps {
@@ -20,6 +20,30 @@ export function UIOverlay({
 }: UIOverlayProps) {
   const isEditing = useCameraPathsStore((s) => s.isEditing);
   const visibleIds = useVisibleItemsStore((s) => s.visibleIds);
+  const activePath = useActivePath();
+
+  const handleExportPath = () => {
+    if (!activePath) return;
+
+    const data = {
+      id: activePath.id,
+      name: activePath.name,
+      speed: activePath.speed,
+      loop: activePath.loop,
+      waypoints: activePath.waypoints,
+    };
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${activePath.name || "camera-path"}.json`;
+    a.click();
+
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div style={overlayStyle}>
@@ -74,6 +98,15 @@ export function UIOverlay({
           }
         >
           {isEditing ? "DONE EDITING PATH" : "EDIT CAMERA PATH"}
+        </button>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={handleExportPath}
+          disabled={!activePath}
+          aria-label="Export current camera path as JSON"
+        >
+          EXPORT CAMERA PATH JSON
         </button>
       </div>
       {/*

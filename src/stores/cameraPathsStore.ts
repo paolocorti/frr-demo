@@ -3,6 +3,7 @@ import * as THREE from "three";
 import type { CameraPath, Waypoint } from "../types/cameraPath";
 import { createPath, createWaypoint } from "../types/cameraPath";
 import { PRECOMPUTED_SVG_PATH_POINTS } from "../utils/precomputedSvgPathPoints";
+import svgFollowPath from "../data/svgFollow.json";
 
 const STORAGE_KEY = "camera-paths-v1";
 
@@ -116,7 +117,7 @@ const generateSvgBasedCameraPath = (
   };
 };
 
-const DEFAULT_PATH: CameraPath = generateSvgBasedCameraPath();
+const DEFAULT_PATH: CameraPath = svgFollowPath as CameraPath;
 
 // Load from localStorage on init
 const loadPathsFromStorage = (): CameraPath[] => {
