@@ -109,20 +109,3 @@ const imageStyle: CSSProperties = {
   objectFit: "cover",
   display: "block",
 };
-
-const cardBodyStyle: CSSProperties = {
-  padding: "10px 12px 12px",
-};
-
-const titleStyle: CSSProperties = {
-  margin: 0,
-  fontSize: 12,
-  fontWeight: 600,
-  lineHeight: 1.3,
-};
-
-const metaStyle: CSSProperties = {
-  margin: "6px 0 0",
-  fontSize: 12,
-  color: "#c0c0c0",
-};
