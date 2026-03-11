@@ -13,6 +13,10 @@ interface CameraPathsState {
   isEditing: boolean;
   isDraggingWaypoint: boolean;
 
+  // Camera zoom state for path-following
+  zoomFactor: number; // 0 = close, 1 = far
+  targetZoomFactor: number;
+
   // Path actions
   addPath: (name?: string) => void;
   addSvgPath: () => void;
@@ -38,6 +42,10 @@ interface CameraPathsState {
   // Editor actions
   setEditing: (editing: boolean) => void;
   setDraggingWaypoint: (dragging: boolean) => void;
+
+  // Zoom actions
+  setZoomTarget: (value: number) => void;
+  setZoomFactor: (value: number) => void;
 
   // Persistence
   loadFromStorage: () => void;
@@ -126,6 +134,8 @@ export const useCameraPathsStore = create<CameraPathsState>()((set) => ({
   selectedWaypointId: null,
   isEditing: false,
   isDraggingWaypoint: false,
+   zoomFactor: 0,
+   targetZoomFactor: 0,
 
   // Path actions
   addPath: (name) => {
@@ -224,6 +234,16 @@ export const useCameraPathsStore = create<CameraPathsState>()((set) => ({
 
   setDraggingWaypoint: (dragging: boolean) =>
     set({ isDraggingWaypoint: dragging }),
+
+  // Zoom actions
+  setZoomTarget: (value: number) =>
+    set(() => ({
+      targetZoomFactor: Math.min(1, Math.max(0, value)),
+    })),
+  setZoomFactor: (value: number) =>
+    set(() => ({
+      zoomFactor: Math.min(1, Math.max(0, value)),
+    })),
 
   // Persistence
   loadFromStorage: () =>

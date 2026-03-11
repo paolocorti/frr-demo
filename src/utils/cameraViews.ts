@@ -10,6 +10,12 @@ export const getOverviewView = (): CameraView => ({
   target: [0, 0, 0],
 });
 
+export const getCurationView = (): CameraView => ({
+  // Tuned for a closer, more focused framing on the central area
+  position: [0.5, 1.2, 3.2],
+  target: [0.2, 0.4, 0],
+});
+
 export const getItemView = (
   position: Vec3,
   forward: Vec3,

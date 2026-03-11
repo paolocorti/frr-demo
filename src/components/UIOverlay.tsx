@@ -122,6 +122,7 @@ const overlayStyle: CSSProperties = {
 
 const sectionStyle: CSSProperties = {
   display: "flex",
+  flexDirection: "column",
   gap: "8px",
 };
 

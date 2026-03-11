@@ -40,7 +40,7 @@ export function PathInstances() {
   );
 
   // Update list of items roughly inside the camera frustum
-  const MAX_VISIBLE = 20;
+  const MAX_VISIBLE = 15;
   const MAX_DISTANCE = 10; // world units from camera
 
   useFrame(() => {
@@ -105,14 +105,14 @@ export function PathInstances() {
           position.y += 0.25;
         }
 
-        const scale =
-          item.hasMedia === "true"
-            ? new THREE.Vector3(
-                0.5 + Math.random() * 1.5,
-                0.5 + Math.random() * 0.75,
-                1,
-              )
-            : new THREE.Vector3(1, 0.5, 1);
+        const hasMedia = item?.media?.[0]?.url?.thumbnail !== undefined;
+        const scale = hasMedia
+          ? new THREE.Vector3(
+              0.5 + Math.random() * 1.5,
+              0.5 + Math.random() * 0.75,
+              1,
+            )
+          : new THREE.Vector3(1, 0.5, 1);
 
         const color = isSelected ? new THREE.Color("#ff0000") : baseColor;
 

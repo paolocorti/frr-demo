@@ -24,7 +24,7 @@ export function ItemsCardStrip() {
       aria-live="polite"
     >
       <div style={stripInnerStyle}>
-        {visibleItems.map((item) => {
+        {visibleItems.map((item, index) => {
           const media = item.media?.[0];
           const thumbUrl =
             media?.url?.thumbnail ??
@@ -39,6 +39,9 @@ export function ItemsCardStrip() {
               style={{
                 ...cardStyle,
                 ...visibleCardStyle,
+                transform: `rotate3d(0,0,0,${-60 + index * 10}deg)`,
+                transformOrigin: "center center",
+                width: window.innerWidth / 17,
               }}
               aria-label={item.detailsTitle ?? item.preferredLabel}
             >
@@ -50,10 +53,10 @@ export function ItemsCardStrip() {
                   loading="lazy"
                 />
               )}
-              <div style={cardBodyStyle}>
+              {/* <div style={cardBodyStyle}>
                 <h3 style={titleStyle}>{item.preferredLabel}</h3>
                 <p style={metaStyle}>{item.year && <span>{item.year}</span>}</p>
-              </div>
+              </div> */}
             </article>
           );
         })}
@@ -113,7 +116,7 @@ const cardBodyStyle: CSSProperties = {
 
 const titleStyle: CSSProperties = {
   margin: 0,
-  fontSize: 14,
+  fontSize: 12,
   fontWeight: 600,
   lineHeight: 1.3,
 };

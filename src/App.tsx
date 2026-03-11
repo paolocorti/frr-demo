@@ -5,7 +5,7 @@ import { ItemsCardStrip } from "./components/ItemsCardStrip";
 import type { CameraControllerRef } from "./components/CameraController";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useCameraPathsStore } from "./stores/cameraPathsStore";
-import { getOverviewView } from "./utils/cameraViews";
+import { getCurationView } from "./utils/cameraViews";
 import "./App.css";
 
 function App() {
@@ -15,34 +15,28 @@ function App() {
   const setCurationSelection = useSelectionStore((s) => s.setCurationSelection);
   const isEditing = useCameraPathsStore((s) => s.isEditing);
   const setEditing = useCameraPathsStore((s) => s.setEditing);
-  const paths = useCameraPathsStore((s) => s.paths);
-  const setActivePath = useCameraPathsStore((s) => s.setActivePath);
-  const addSvgPathWithLessZoom = useCameraPathsStore(
-    (s) => s.addSvgPathWithLessZoom,
-  );
+  const setZoomTarget = useCameraPathsStore((s) => s.setZoomTarget);
   const CURATION_INDICES = [10, 25, 40, 55, 70, 85, 100, 115];
 
   const handleSearch = useCallback(() => {
     clearSelection();
-    const lessZoomPath = paths.find((p) => p.name === "SVG Less Zoom");
-    if (lessZoomPath) {
-      setActivePath(lessZoomPath.id);
-    } else {
-      addSvgPathWithLessZoom();
-    }
-    // Restart animation from beginning with the SVG less-zoom path
+    // Zoom out along the current active path
+    setZoomTarget(1);
+    // Restart animation from beginning
     setIsAnimating(true);
     cameraControllerRef.current?.reset();
-  }, [addSvgPathWithLessZoom, clearSelection, paths, setActivePath]);
+  }, [clearSelection, setZoomTarget]);
 
   const handleCurationSelected = useCallback(() => {
     setIsAnimating(false);
     setCurationSelection(CURATION_INDICES);
-    const view = getOverviewView();
+    // Move to a precise curated camera view and zoom level
+    setZoomTarget(0.2);
+    const view = getCurationView();
     if (!cameraControllerRef.current) return;
-    // Smoothly transition from current camera position to the overview view
+    // Smoothly transition from current camera position to the curated view
     cameraControllerRef.current.startTransition(view.position, view.target, 2);
-  }, [CURATION_INDICES, setCurationSelection]);
+  }, [CURATION_INDICES, setCurationSelection, setZoomTarget]);
 
   const handleItemSelected = useCallback(
     (index: number) => {
