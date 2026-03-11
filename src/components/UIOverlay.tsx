@@ -165,6 +165,7 @@ const buttonStyle: CSSProperties = {
   fontWeight: "bold",
   backgroundColor: "#000",
   border: "2px solid #333",
+  color: "white",
   borderRadius: "8px",
   cursor: "pointer",
   boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
