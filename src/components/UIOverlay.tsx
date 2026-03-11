@@ -1,45 +1,81 @@
 import type { CSSProperties } from "react";
 import { PathSelector } from "./PathSelector";
 import { useCameraPathsStore } from "../stores/cameraPathsStore";
+import { useVisibleItemsStore } from "../stores/visibleItemsStore";
 
 interface UIOverlayProps {
-  onReset: () => void;
-  onToggleAnimation: () => void;
-  isAnimating: boolean;
+  onSearch: () => void;
+  onCurationSelected: () => void;
+  onItemSelected1: () => void;
+  onItemSelected2: () => void;
 }
 
 export function UIOverlay({
-  onReset,
-  onToggleAnimation,
-  isAnimating,
+  onSearch,
+  onCurationSelected,
+  onItemSelected1,
+  onItemSelected2,
 }: UIOverlayProps) {
   const isEditing = useCameraPathsStore((s) => s.isEditing);
-  const setEditing = useCameraPathsStore((s) => s.setEditing);
+  const visibleIds = useVisibleItemsStore((s) => s.visibleIds);
 
   return (
     <div style={overlayStyle}>
       <div style={sectionStyle}>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onSearch}
+          aria-label="Trigger search camera path"
+        >
+          SEARCH
+        </button>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onCurationSelected}
+          aria-label="Show curation selection"
+        >
+          CURATION SELECTED
+        </button>
+      </div>
+
+      <div style={sectionStyle}>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onItemSelected1}
+          aria-label="Focus camera on first selected item"
+        >
+          ITEM SELECTED
+        </button>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onItemSelected2}
+          aria-label="Focus camera on second selected item"
+        >
+          ITEM SELECTED 2
+        </button>
+      </div>
+
+      {/* <div style={sectionStyle}>
         <button style={buttonStyle} onClick={onReset}>
           Reset Camera
         </button>
         <button style={buttonStyle} onClick={onToggleAnimation}>
           {isAnimating ? "Stop Animation" : "Play Animation"}
         </button>
-      </div>
-
-      <div style={sectionStyle}>
-        <button
-          style={{
-            ...buttonStyle,
-            backgroundColor: isEditing ? "#ff9800" : "#000",
-          }}
-          onClick={() => setEditing(!isEditing)}
-        >
-          {isEditing ? "Exit Edit Mode" : "Edit Paths"}
-        </button>
-      </div>
+      </div> */}
 
       <PathSelector isEditing={isEditing} />
+
+      {visibleIds.length > 0 && (
+        <div style={visibleListStyle} aria-live="polite">
+          <strong>Visible IDs:</strong>{" "}
+          <span>{visibleIds.join(", ")}</span>
+        </div>
+      )}
 
       {isEditing && (
         <div style={instructionsStyle}>
@@ -91,4 +127,16 @@ const instructionsStyle: CSSProperties = {
   fontSize: "12px",
   lineHeight: "1.5",
   maxWidth: "200px",
+};
+
+const visibleListStyle: CSSProperties = {
+  marginTop: "8px",
+  padding: "8px 10px",
+  background: "rgba(0,0,0,0.65)",
+  color: "white",
+  borderRadius: "8px",
+  fontSize: "11px",
+  lineHeight: 1.4,
+  maxWidth: "260px",
+  wordWrap: "break-word",
 };

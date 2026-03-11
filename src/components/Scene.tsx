@@ -27,7 +27,7 @@ export function Scene({ isAnimating, cameraControllerRef }: SceneProps) {
         <PathInstances />
       </group>
 
-      <Grid args={[100, 100]} sectionColor={"#777"} cellSize={1} />
+      {/* <Grid args={[100, 100]} sectionColor={"#777"} cellSize={1} /> */}
 
       {/* Camera path editor - includes clickable ground */}
       {isEditing && <CameraPathEditor />}

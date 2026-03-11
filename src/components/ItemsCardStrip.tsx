@@ -1,0 +1,171 @@
+import { useEffect, useState, type CSSProperties } from "react";
+import { useVisibleItemsStore } from "../stores/visibleItemsStore";
+
+interface MediaUrl {
+  thumbnail?: string;
+  medium?: string;
+  large?: string;
+  frontend?: string;
+  h264_hi?: string;
+  original?: string;
+}
+
+interface MediaItem {
+  title?: string;
+  mimetype?: string;
+  url?: MediaUrl;
+}
+
+interface DataItem {
+  id: number;
+  preferredLabel?: string;
+  detailsTitle?: string;
+  year?: string;
+  detailsDescription?: string;
+  media?: MediaItem[];
+}
+
+export function ItemsCardStrip() {
+  const [items, setItems] = useState<DataItem[]>([]);
+  const visibleIds = useVisibleItemsStore((s) => s.visibleIds);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch("/data.json")
+      .then((response) => response.json())
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setItems(data);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load data.json for ItemsCardStrip", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (!items.length) {
+    return null;
+  }
+
+  const visibleSet = new Set(visibleIds);
+  const visibleItems = items.filter((item) => visibleSet.has(item.id));
+
+  if (!visibleItems.length) {
+    return null;
+  }
+
+  return (
+    <section
+      style={stripContainerStyle}
+      aria-label="Items overview cards"
+      aria-live="polite"
+    >
+      <div style={stripInnerStyle}>
+        {visibleItems.map((item) => {
+          const media = item.media?.[0];
+          const thumbUrl =
+            media?.url?.thumbnail ??
+            media?.url?.medium ??
+            media?.url?.frontend ??
+            media?.url?.large ??
+            media?.url?.original;
+
+          return (
+            <article
+              key={item.id}
+              style={{
+                ...cardStyle,
+                ...visibleCardStyle,
+              }}
+              aria-label={item.detailsTitle ?? item.preferredLabel}
+            >
+              {thumbUrl && (
+                <img
+                  src={thumbUrl}
+                  alt={item.detailsTitle ?? item.preferredLabel ?? ""}
+                  style={imageStyle}
+                  loading="lazy"
+                />
+              )}
+              <div style={cardBodyStyle}>
+                <h3 style={titleStyle}>{item.preferredLabel}</h3>
+                <p style={metaStyle}>{item.year && <span>{item.year}</span>}</p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+const stripContainerStyle: CSSProperties = {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  padding: "12px 16px 16px",
+  boxSizing: "border-box",
+  pointerEvents: "auto",
+  zIndex: 1000,
+  background:
+    "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.7), transparent)",
+};
+
+const stripInnerStyle: CSSProperties = {
+  display: "flex",
+  gap: "12px",
+  overflowX: "auto",
+  paddingBottom: 4,
+};
+
+const cardStyle: CSSProperties = {
+  minWidth: 100,
+  maxWidth: 120,
+  backgroundColor: "rgba(10,10,10,0.95)",
+  aspectRatio: 9 / 16,
+  overflow: "hidden",
+  border: "1px solid rgba(255,255,255,0.08)",
+  boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+  color: "#f5f5f5",
+  display: "flex",
+  flexDirection: "column",
+  flexShrink: 0,
+};
+
+const visibleCardStyle: CSSProperties = {
+  opacity: 1,
+};
+
+const dimmedCardStyle: CSSProperties = {
+  opacity: 0.45,
+};
+
+const imageStyle: CSSProperties = {
+  width: "100%",
+  height: 120,
+  objectFit: "cover",
+  display: "block",
+};
+
+const cardBodyStyle: CSSProperties = {
+  padding: "10px 12px 12px",
+};
+
+const titleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 14,
+  fontWeight: 600,
+  lineHeight: 1.3,
+};
+
+const metaStyle: CSSProperties = {
+  margin: "6px 0 0",
+  fontSize: 12,
+  color: "#c0c0c0",
+};
