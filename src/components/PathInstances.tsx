@@ -32,7 +32,7 @@ export function PathInstances() {
     [items.length],
   );
 
-  const { curve } = useSvgPath(instanceCount);
+  const { curve } = useSvgPath();
 
   const transforms = useMemo(
     () => calculateInstanceTransforms(curve, instanceCount),
