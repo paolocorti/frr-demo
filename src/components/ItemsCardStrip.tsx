@@ -1,52 +1,10 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import { useVisibleItemsStore } from "../stores/visibleItemsStore";
-
-interface MediaUrl {
-  thumbnail?: string;
-  medium?: string;
-  large?: string;
-  frontend?: string;
-  h264_hi?: string;
-  original?: string;
-}
-
-interface MediaItem {
-  title?: string;
-  mimetype?: string;
-  url?: MediaUrl;
-}
-
-interface DataItem {
-  id: number;
-  preferredLabel?: string;
-  detailsTitle?: string;
-  year?: string;
-  detailsDescription?: string;
-  media?: MediaItem[];
-}
+import { useDataItems } from "../hooks/useDataItems";
 
 export function ItemsCardStrip() {
-  const [items, setItems] = useState<DataItem[]>([]);
+  const items = useDataItems();
   const visibleIds = useVisibleItemsStore((s) => s.visibleIds);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    fetch("/data.json")
-      .then((response) => response.json())
-      .then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setItems(data);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load data.json for ItemsCardStrip", error);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   if (!items.length) {
     return null;

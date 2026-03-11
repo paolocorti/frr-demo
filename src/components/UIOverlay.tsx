@@ -8,6 +8,7 @@ interface UIOverlayProps {
   onCurationSelected: () => void;
   onItemSelected1: () => void;
   onItemSelected2: () => void;
+  onToggleEditing: () => void;
 }
 
 export function UIOverlay({
@@ -15,6 +16,7 @@ export function UIOverlay({
   onCurationSelected,
   onItemSelected1,
   onItemSelected2,
+  onToggleEditing,
 }: UIOverlayProps) {
   const isEditing = useCameraPathsStore((s) => s.isEditing);
   const visibleIds = useVisibleItemsStore((s) => s.visibleIds);
@@ -28,7 +30,7 @@ export function UIOverlay({
           onClick={onSearch}
           aria-label="Trigger search camera path"
         >
-          SEARCH
+          SEARCH BEGINES
         </button>
         <button
           style={buttonStyle}
@@ -59,21 +61,36 @@ export function UIOverlay({
         </button>
       </div>
 
-      {/* <div style={sectionStyle}>
+      <div style={sectionStyle}>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onToggleEditing}
+          aria-pressed={isEditing}
+          aria-label={
+            isEditing
+              ? "Exit camera path editing mode"
+              : "Enter camera path editing mode"
+          }
+        >
+          {isEditing ? "DONE EDITING PATH" : "EDIT CAMERA PATH"}
+        </button>
+      </div>
+      {/*
+      <div style={sectionStyle}>
         <button style={buttonStyle} onClick={onReset}>
           Reset Camera
         </button>
         <button style={buttonStyle} onClick={onToggleAnimation}>
           {isAnimating ? "Stop Animation" : "Play Animation"}
         </button>
-      </div> */}
+      </div>  */}
 
       <PathSelector isEditing={isEditing} />
 
       {visibleIds.length > 0 && (
         <div style={visibleListStyle} aria-live="polite">
-          <strong>Visible IDs:</strong>{" "}
-          <span>{visibleIds.join(", ")}</span>
+          <strong>Visible IDs:</strong> <span>{visibleIds.join(", ")}</span>
         </div>
       )}
 

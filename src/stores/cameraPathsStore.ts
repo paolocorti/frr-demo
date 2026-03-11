@@ -1,6 +1,8 @@
 import { create } from "zustand";
+import * as THREE from "three";
 import type { CameraPath, Waypoint } from "../types/cameraPath";
 import { createPath, createWaypoint } from "../types/cameraPath";
+import { samplePointsFromPath } from "../utils/pathParser";
 
 const STORAGE_KEY = "camera-paths-v1";
 
@@ -13,6 +15,8 @@ interface CameraPathsState {
 
   // Path actions
   addPath: (name?: string) => void;
+  addSvgPath: () => void;
+  addSvgPathWithLessZoom: () => void;
   removePath: (id: string) => void;
   updatePath: (id: string, updates: Partial<CameraPath>) => void;
   setActivePath: (id: string | null) => void;
@@ -39,39 +43,64 @@ interface CameraPathsState {
   loadFromStorage: () => void;
 }
 
-const DEFAULT_PATH: CameraPath = {
-  id: "path-1772458000637-8ffl757or",
-  name: "test",
-  waypoints: [
-    {
-      id: "waypoint-1772458013046-jzjpsc7d1",
-      position: [-5.186425161997555, 0.1, 5.673950598750155],
-      lookAt: [26.5, 0, -61.5],
-    },
-    {
-      id: "waypoint-1772458035968-uk79wqw6k",
-      position: [-3.5174893041701445, 0.1, -0.3871888258556364],
-      lookAt: [1, 0, 1.5],
-    },
-    {
-      id: "waypoint-1772458049380-n5k84xyfx",
-      position: [1.3856488331414591, 0.1, 4.900127073515091],
-      lookAt: [0, 0, 0],
-    },
-    {
-      id: "waypoint-1772461178671-nxqncfkno",
-      position: [3.4005059047139703, 0.1, 0.15400122812511963],
-      lookAt: [0, 0, 0],
-    },
-    {
-      id: "waypoint-1772461190871-grg2g9t7m",
-      position: [5.4064874452974205, 0.1, -6.196561690120127],
-      lookAt: [0, 0, 0],
-    },
-  ],
-  speed: 0.005,
-  loop: true,
+interface GenerateCameraPathOptions {
+  name?: string;
+  numWaypoints?: number;
+  lateralOffset?: number;
+  heightOffset?: number;
+  speed?: number;
+  loop?: boolean;
+}
+
+const generateSvgBasedCameraPath = (
+  options: GenerateCameraPathOptions = {},
+): CameraPath => {
+  const {
+    name = "SVG Follow",
+    numWaypoints = 80,
+    lateralOffset = 0.3,
+    heightOffset = 0.2,
+    speed = 0.002,
+    loop = true,
+  } = options;
+
+  const basePoints = samplePointsFromPath(numWaypoints);
+  const waypoints: Waypoint[] = [];
+
+  const pathId = `path-svg-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 9)}`;
+
+  for (let i = 0; i < basePoints.length; i += 1) {
+    const current = basePoints[i];
+    const prev = basePoints[i === 0 ? i : i - 1];
+    const next = basePoints[i === basePoints.length - 1 ? i : i + 1];
+
+    const tangent = new THREE.Vector3().subVectors(next, prev).normalize();
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+    const position = current
+      .clone()
+      .add(normal.multiplyScalar(lateralOffset))
+      .add(new THREE.Vector3(0, heightOffset, 0));
+
+    waypoints.push({
+      id: `waypoint-svg-${pathId}-${i}`,
+      position: [position.x, position.y, position.z],
+      lookAt: [current.x, current.y, current.z],
+    });
+  }
+
+  return {
+    id: pathId,
+    name,
+    waypoints,
+    speed,
+    loop,
+  };
 };
+
+const DEFAULT_PATH: CameraPath = generateSvgBasedCameraPath();
 
 // Load from localStorage on init
 const loadPathsFromStorage = (): CameraPath[] => {
@@ -101,6 +130,29 @@ export const useCameraPathsStore = create<CameraPathsState>()((set) => ({
   // Path actions
   addPath: (name) => {
     const newPath = createPath(name);
+    set((state) => ({
+      paths: [...state.paths, newPath],
+      activePathId: newPath.id,
+    }));
+  },
+
+  addSvgPath: () => {
+    const newPath = generateSvgBasedCameraPath();
+    set((state) => ({
+      paths: [...state.paths, newPath],
+      activePathId: newPath.id,
+    }));
+  },
+
+  addSvgPathWithLessZoom: () => {
+    const newPath = generateSvgBasedCameraPath({
+      name: "SVG Less Zoom",
+      heightOffset: 0.75,
+      lateralOffset: 0.5,
+      speed: 0.004,
+      loop: true,
+    });
+
     set((state) => ({
       paths: [...state.paths, newPath],
       activePathId: newPath.id,

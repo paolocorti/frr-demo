@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Instances, Instance } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
@@ -6,6 +6,7 @@ import { useSvgPath } from "../hooks/useSvgPath";
 import { calculateInstanceTransforms } from "../utils/geometryHelpers";
 import { useSelectionStore } from "../stores/selectionStore";
 import { useVisibleItemsStore } from "../stores/visibleItemsStore";
+import { useDataItems } from "../hooks/useDataItems";
 
 const RECTANGLE_SIZE = { width: 0.08, height: 0.2, depth: 0.001 };
 const COLOR_STOPS = [
@@ -17,7 +18,7 @@ const COLOR_STOPS = [
 ];
 
 export function PathInstances() {
-  const [items, setItems] = useState<any[]>([]);
+  const items = useDataItems();
   const selectedIndices = useSelectionStore((s) => s.selectedIndices);
   const setVisibleIds = useVisibleItemsStore((s) => s.setVisibleIds);
   const { camera } = useThree();
@@ -25,27 +26,6 @@ export function PathInstances() {
   const frustum = useRef(new THREE.Frustum());
   const projScreenMatrix = useRef(new THREE.Matrix4());
   const lastVisibleKey = useRef<string>("");
-
-  // Load JSON data from the public folder
-  useEffect(() => {
-    let isMounted = true;
-
-    fetch("/data.json")
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("data", data);
-        if (isMounted && Array.isArray(data)) {
-          setItems(data);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load data.json", error);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const instanceCount = useMemo(
     () => Math.max(2, items.length || 0),
@@ -60,6 +40,9 @@ export function PathInstances() {
   );
 
   // Update list of items roughly inside the camera frustum
+  const MAX_VISIBLE = 20;
+  const MAX_DISTANCE = 10; // world units from camera
+
   useFrame(() => {
     if (!items.length || !transforms.length) return;
 
@@ -80,6 +63,7 @@ export function PathInstances() {
       if (!frustum.current.containsPoint(position)) continue;
 
       const distance = camera.position.distanceTo(position);
+      if (distance > MAX_DISTANCE) continue;
       candidates.push({ id: item.id as number, distance });
     }
 
@@ -90,14 +74,15 @@ export function PathInstances() {
         if (!item || item.id == null) continue;
         const position = transforms[i].position;
         const distance = camera.position.distanceTo(position);
-        candidates.push({ id: item.id as number, distance });
+        if (distance <= MAX_DISTANCE) {
+          candidates.push({ id: item.id as number, distance });
+        }
       }
     }
 
     candidates.sort((a, b) => a.distance - b.distance);
 
     // Only keep a subset (closest to camera) so we never flag all 500
-    const MAX_VISIBLE = 40;
     const visibleIds = candidates.slice(0, MAX_VISIBLE).map((c) => c.id);
 
     const key = visibleIds.join(",");
@@ -120,11 +105,14 @@ export function PathInstances() {
           position.y += 0.25;
         }
 
-        const scale = new THREE.Vector3(
-          0.5 + Math.random() * 1.5,
-          0.5 + Math.random() * 0.75,
-          1,
-        );
+        const scale =
+          item.hasMedia === "true"
+            ? new THREE.Vector3(
+                0.5 + Math.random() * 1.5,
+                0.5 + Math.random() * 0.75,
+                1,
+              )
+            : new THREE.Vector3(1, 0.5, 1);
 
         const color = isSelected ? new THREE.Color("#ff0000") : baseColor;
 
@@ -136,7 +124,7 @@ export function PathInstances() {
             scale={scale}
             color={color}
           >
-            <mesh>
+            {/* <mesh>
               <planeGeometry args={[0.1, 0.1]} />
               <meshStandardMaterial
                 color={"white"}
@@ -144,7 +132,7 @@ export function PathInstances() {
                 opacity={0.9}
                 transparent
               />
-            </mesh>
+            </mesh> */}
           </Instance>
         );
       }),

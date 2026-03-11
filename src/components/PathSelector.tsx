@@ -6,6 +6,10 @@ export function PathSelector({ isEditing }: { isEditing: boolean }) {
   const activePathId = useCameraPathsStore((s) => s.activePathId);
   const setActivePath = useCameraPathsStore((s) => s.setActivePath);
   const addPath = useCameraPathsStore((s) => s.addPath);
+  const addSvgPath = useCameraPathsStore((s) => s.addSvgPath);
+  const addSvgPathWithLessZoom = useCameraPathsStore(
+    (s) => s.addSvgPathWithLessZoom,
+  );
   const removePath = useCameraPathsStore((s) => s.removePath);
   const updatePath = useCameraPathsStore((s) => s.updatePath);
   const activePath = useActivePath();
@@ -31,6 +35,12 @@ export function PathSelector({ isEditing }: { isEditing: boolean }) {
         <div style={rowStyle}>
           <button style={buttonStyle} onClick={() => addPath()}>
             + New Path
+          </button>
+          <button style={buttonStyle} onClick={() => addSvgPath()}>
+            + New SVG Path
+          </button>
+          <button style={buttonStyle} onClick={() => addSvgPathWithLessZoom()}>
+            + New SVG Path with Less Zoom
           </button>
           {activePathId && (
             <button
