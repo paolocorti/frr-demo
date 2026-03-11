@@ -2,7 +2,6 @@ import { Canvas } from "@react-three/fiber";
 import { PathInstances } from "./PathInstances";
 import { CameraController } from "./CameraController";
 import type { CameraControllerRef } from "./CameraController";
-import { Grid } from "@react-three/drei";
 import { CameraPathEditor } from "./CameraPathEditor";
 import { useCameraPathsStore } from "../stores/cameraPathsStore";
 

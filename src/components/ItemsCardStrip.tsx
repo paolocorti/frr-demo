@@ -142,10 +142,6 @@ const visibleCardStyle: CSSProperties = {
   opacity: 1,
 };
 
-const dimmedCardStyle: CSSProperties = {
-  opacity: 0.45,
-};
-
 const imageStyle: CSSProperties = {
   width: "100%",
   height: 120,
