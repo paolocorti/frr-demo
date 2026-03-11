@@ -2,7 +2,7 @@ import { create } from "zustand";
 import * as THREE from "three";
 import type { CameraPath, Waypoint } from "../types/cameraPath";
 import { createPath, createWaypoint } from "../types/cameraPath";
-import { samplePointsFromPath } from "../utils/pathParser";
+import { PRECOMPUTED_SVG_PATH_POINTS } from "../utils/precomputedSvgPathPoints";
 
 const STORAGE_KEY = "camera-paths-v1";
 
@@ -72,7 +72,15 @@ const generateSvgBasedCameraPath = (
     loop = true,
   } = options;
 
-  const basePoints = samplePointsFromPath(numWaypoints);
+  const totalSamples = PRECOMPUTED_SVG_PATH_POINTS.length;
+  const step = Math.max(1, Math.floor(totalSamples / numWaypoints));
+  const basePoints: THREE.Vector3[] = [];
+
+  for (let i = 0; i < numWaypoints; i += 1) {
+    const index = Math.min(totalSamples - 1, i * step);
+    const [x, y, z] = PRECOMPUTED_SVG_PATH_POINTS[index];
+    basePoints.push(new THREE.Vector3(x, y, z));
+  }
   const waypoints: Waypoint[] = [];
 
   const pathId = `path-svg-${Date.now()}-${Math.random()
