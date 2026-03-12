@@ -39,8 +39,8 @@ async function loadAndSortData(): Promise<DataItem[]> {
       const ay = Number.parseInt(a.year ?? "0", 10) || 0;
       const by = Number.parseInt(b.year ?? "0", 10) || 0;
 
-      // Newest first
-      return by - ay;
+      // Oldest first
+      return ay - by;
     });
 
     cachedItems = sorted;
@@ -87,4 +87,3 @@ export function useDataItems(): DataItem[] {
 
   return items;
 }
-
