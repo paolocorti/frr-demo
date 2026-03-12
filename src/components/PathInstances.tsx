@@ -1,14 +1,57 @@
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import { Instances, Instance } from "@react-three/drei";
+import { Instances, Instance, Billboard } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
 import { useSvgPath } from "../hooks/useSvgPath";
 import { calculateInstanceTransforms } from "../utils/geometryHelpers";
 import { useSelectionStore } from "../stores/selectionStore";
 import { useVisibleItemsStore } from "../stores/visibleItemsStore";
 import { useDataItems } from "../hooks/useDataItems";
+import { Text } from "@react-three/drei";
 
-const RECTANGLE_SIZE = { width: 0.08, height: 0.2, depth: 0.001 };
+const RECTANGLE_SIZE = { width: 0.2, height: 0.2, depth: 0.001 };
+const MIN_DEPTH_SCALE = 1;
+const MAX_DEPTH_SCALE = 8;
+const MEDIA_COUNT_FOR_MAX_DEPTH = 8;
+const FLAG_SIZE: [number, number, number] = [0.04, 0.2, 0.001];
+const LEFT_FLAG_LOCAL_OFFSET = new THREE.Vector3(-0.105, 0, 0.0);
+const RIGHT_FLAG_LOCAL_OFFSET = new THREE.Vector3(0.105, 0, 0.0);
+
+const colorType = {
+  Issues: new THREE.Color("#8B153D"),
+  Articles: new THREE.Color("#8B153D"),
+  Publications: new THREE.Color("#8B153D"),
+  Photographies: new THREE.Color("#F0EDE7"),
+  Video: new THREE.Color("#F0EDE7"),
+  Documents: new THREE.Color("#F0EDE7"),
+  Audio: new THREE.Color("#F0EDE7"),
+  Correspondences: new THREE.Color("#C9CAD4"),
+  Drawings: new THREE.Color("#C9CAD4"),
+  People: new THREE.Color("#BB0F33"),
+  Companies: new THREE.Color("#BB0F33"),
+  Events: new THREE.Color("#BB0F33"),
+  Places: new THREE.Color("#BB0F33"),
+  "Archival Units": new THREE.Color("#FFF200"),
+  Files: new THREE.Color("#FFF200"),
+  Objects: new THREE.Color("#FFF200"),
+  "Signature Features": new THREE.Color("#ED1C24"),
+  Models: new THREE.Color("#ED1C24"),
+  Prototypes: new THREE.Color("#ED1C24"),
+  "Sport car": new THREE.Color("#ED1C24"),
+  Engines: new THREE.Color("#ED1C24"),
+  SingleSeater: new THREE.Color("#ED1C24"),
+  Meccanica: new THREE.Color("#ED1C24"),
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function mapMediaCountToDepthScale(mediaCount: number): number {
+  const normalized = clamp(mediaCount / MEDIA_COUNT_FOR_MAX_DEPTH, 0, 1);
+  return MIN_DEPTH_SCALE + normalized * (MAX_DEPTH_SCALE - MIN_DEPTH_SCALE);
+}
+
 const COLOR_STOPS = [
   // new THREE.Color("#ffffff"), // white
   //new THREE.Color("#ffff00"), // yellow
@@ -16,6 +59,27 @@ const COLOR_STOPS = [
   //new THREE.Color("#ff0000"), // red
   //new THREE.Color("#555555"), // dark gray
 ];
+
+type InstanceLayerData = {
+  key: number | string;
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  scale: THREE.Vector3;
+  scaleSideFlag: THREE.Vector3;
+  color: THREE.Color;
+  flagColor: THREE.Color;
+  leftFlagPosition: THREE.Vector3;
+  rightFlagPosition: THREE.Vector3;
+};
+
+type YearStartMarkerData = {
+  key: string;
+  year: string;
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  scale: THREE.Vector3;
+  color: THREE.Color;
+};
 
 export function PathInstances() {
   const items = useDataItems();
@@ -92,69 +156,189 @@ export function PathInstances() {
     }
   });
 
-  const instances = useMemo(
+  const selectedIndexSet = useMemo(
+    () => new Set(selectedIndices),
+    [selectedIndices],
+  );
+
+  const instances = useMemo<InstanceLayerData[]>(
     () =>
       transforms.map((transform, i) => {
         const item = items[i];
         const colorIndex = i % COLOR_STOPS.length;
         const baseColor = COLOR_STOPS[colorIndex];
-        const isSelected = selectedIndices.includes(i);
+        const isSelected = selectedIndexSet.has(i);
 
         const position = transform.position.clone();
         if (isSelected) {
           position.y += 0.25;
         }
 
-        const hasMedia = item?.media?.[0]?.url?.thumbnail !== undefined;
+        const mediaCount = item?.media?.length ?? 0;
+        const depthScale = mapMediaCountToDepthScale(mediaCount);
+        const hasMedia = mediaCount > 0;
+
+        let sizeWidth = 0;
+        let sizeHeight = 0;
+
+        if (hasMedia) {
+          const media = item?.media?.[0];
+          const mediaSize = (media as { size?: [number?, number?] } | undefined)
+            ?.size;
+          const mediaWidth = mediaSize?.[0] ?? 0;
+          const mediaHeight = mediaSize?.[1] ?? 0;
+          const aspectRatio =
+            mediaWidth > 0 && mediaHeight > 0 ? mediaHeight / mediaWidth : 1;
+
+          sizeWidth = 1;
+          sizeHeight = aspectRatio;
+        }
+
         const scale = hasMedia
-          ? new THREE.Vector3(
-              0.5 + Math.random() * 1.5,
-              0.5 + Math.random() * 0.75,
-              1,
-            )
-          : new THREE.Vector3(1, 0.5, 1);
+          ? new THREE.Vector3(sizeWidth, sizeHeight, depthScale)
+          : new THREE.Vector3(1, 0.5, depthScale);
 
-        const color = isSelected ? new THREE.Color("#ff0000") : baseColor;
+        const scaleSideFlag = hasMedia
+          ? new THREE.Vector3(0.2, sizeHeight, depthScale)
+          : new THREE.Vector3(0.2, 0.5, depthScale);
 
-        return (
-          <Instance
-            key={item?.id ?? i}
-            position={position}
-            quaternion={transform.quaternion}
-            scale={scale}
-            color={color}
-          >
-            {/* <mesh>
-              <planeGeometry args={[0.1, 0.1]} />
-              <meshStandardMaterial
-                color={"white"}
-                side={THREE.DoubleSide}
-                opacity={0.9}
-                transparent
-              />
-            </mesh> */}
-          </Instance>
-        );
+        const color = isSelected ? baseColor : baseColor;
+        const itemType = (item as { type?: keyof typeof colorType } | undefined)
+          ?.type;
+        const flagColor =
+          (itemType ? colorType[itemType] : undefined) ??
+          new THREE.Color("#ffffff");
+
+        const leftFlagPosition = position
+          .clone()
+          .add(
+            LEFT_FLAG_LOCAL_OFFSET.clone().applyQuaternion(
+              transform.quaternion,
+            ),
+          );
+        const rightFlagPosition = position
+          .clone()
+          .add(
+            RIGHT_FLAG_LOCAL_OFFSET.clone().applyQuaternion(
+              transform.quaternion,
+            ),
+          );
+
+        return {
+          key: item?.id ?? i,
+          position,
+          quaternion: transform.quaternion,
+          scale,
+          scaleSideFlag,
+          color,
+          flagColor,
+          leftFlagPosition,
+          rightFlagPosition,
+        };
       }),
-    [items, selectedIndices, transforms],
+    [items, selectedIndexSet, transforms],
   );
 
+  const yearStartMarkers = useMemo<YearStartMarkerData[]>(() => {
+    const markers: YearStartMarkerData[] = [];
+    let previousYear: number | null = null;
+    const markerOffset = new THREE.Vector3(0, 0.32, 0);
+
+    const count = Math.min(items.length, transforms.length);
+    for (let i = 0; i < count; i += 1) {
+      const item = items[i];
+      const year = Number.parseInt(item?.year ?? "", 10);
+      if (!Number.isFinite(year)) continue;
+
+      // The first item of each year marks a new year boundary.
+      if (year === previousYear) continue;
+      previousYear = year;
+
+      const transform = transforms[i];
+      markers.push({
+        key: `${year}-${item?.id ?? i}`,
+        year: String(year),
+        position: transform.position.clone().add(markerOffset),
+        quaternion: transform.quaternion.clone(),
+        scale: new THREE.Vector3(0.2, 0.2, 0.2),
+        color: new THREE.Color("#00e5ff"),
+      });
+    }
+
+    return markers;
+  }, [items, transforms]);
+
   return (
-    <Instances limit={instanceCount}>
-      <boxGeometry
-        args={[
-          RECTANGLE_SIZE.width,
-          RECTANGLE_SIZE.height,
-          RECTANGLE_SIZE.depth,
-        ]}
-      />
-      <meshStandardMaterial
-        metalness={0.5}
-        roughness={0.9}
-        opacity={0.9}
-        transparent
-      />
-      {instances}
-    </Instances>
+    <>
+      <Instances limit={instanceCount} frustumCulled={false}>
+        <boxGeometry
+          args={[
+            RECTANGLE_SIZE.width,
+            RECTANGLE_SIZE.height,
+            RECTANGLE_SIZE.depth,
+          ]}
+        />
+        <meshStandardMaterial color={"#5C5754"} side={THREE.DoubleSide} />
+        {instances.map((instance) => (
+          <Instance
+            key={`main-${instance.key}`}
+            position={instance.position}
+            quaternion={instance.quaternion}
+            scale={instance.scale}
+            color={instance.color}
+          />
+        ))}
+      </Instances>
+
+      <Instances limit={instanceCount} frustumCulled={false}>
+        <boxGeometry args={FLAG_SIZE} />
+        <meshStandardMaterial color={"#ffffff"} side={THREE.DoubleSide} />
+        {instances.map((instance) => (
+          <Instance
+            key={`left-flag-${instance.key}`}
+            position={instance.leftFlagPosition}
+            quaternion={instance.quaternion}
+            color={instance.flagColor}
+            scale={instance.scaleSideFlag}
+          />
+        ))}
+      </Instances>
+
+      <Instances limit={instanceCount} frustumCulled={false}>
+        <boxGeometry args={FLAG_SIZE} />
+        <meshStandardMaterial color={"#ffffff"} side={THREE.DoubleSide} />
+        {instances.map((instance) => (
+          <Instance
+            key={`right-flag-${instance.key}`}
+            position={instance.rightFlagPosition}
+            quaternion={instance.quaternion}
+            color={instance.flagColor}
+            scale={instance.scaleSideFlag}
+          />
+        ))}
+      </Instances>
+
+      {yearStartMarkers.map((marker) => (
+        <Billboard
+          key={`year-label-${marker.key}`}
+          position={[
+            marker.position.x,
+            marker.position.y - 0.12,
+            marker.position.z,
+          ]}
+        >
+          <Text
+            fontSize={0.03}
+            color="#ffffff"
+            anchorX="center"
+            anchorY="bottom"
+            outlineWidth={0.0035}
+            outlineColor="#111111"
+          >
+            {marker.year}
+          </Text>
+        </Billboard>
+      ))}
+    </>
   );
 }

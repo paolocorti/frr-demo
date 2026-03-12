@@ -5,7 +5,8 @@ import { createPath, createWaypoint } from "../types/cameraPath";
 import { PRECOMPUTED_SVG_PATH_POINTS } from "../utils/precomputedSvgPathPoints";
 import svgFollowPath from "../data/svgFollow.json";
 
-const STORAGE_KEY = "camera-paths-v1";
+// Bump storage key so older \"test\" paths don't override the new SVG JSON default
+const STORAGE_KEY = "camera-paths-v2-svg";
 
 interface CameraPathsState {
   paths: CameraPath[];
@@ -17,6 +18,8 @@ interface CameraPathsState {
   // Camera zoom state for path-following
   zoomFactor: number; // 0 = close, 1 = far
   targetZoomFactor: number;
+  lookAheadBias: number; // 0 = authored lookAt, 1 = movement direction
+  speedMultiplier: number; // runtime-only speed multiplier (not persisted)
 
   // Path actions
   addPath: (name?: string) => void;
@@ -47,6 +50,8 @@ interface CameraPathsState {
   // Zoom actions
   setZoomTarget: (value: number) => void;
   setZoomFactor: (value: number) => void;
+  setLookAheadBias: (value: number) => void;
+  setSpeedMultiplier: (value: number) => void;
 
   // Persistence
   loadFromStorage: () => void;
@@ -143,8 +148,11 @@ export const useCameraPathsStore = create<CameraPathsState>()((set) => ({
   selectedWaypointId: null,
   isEditing: false,
   isDraggingWaypoint: false,
-   zoomFactor: 0,
-   targetZoomFactor: 0,
+  // Start slightly farther from the path by default.
+  zoomFactor: 0.35,
+  targetZoomFactor: 0.35,
+  lookAheadBias: 0,
+  speedMultiplier: 1,
 
   // Path actions
   addPath: (name) => {
@@ -252,6 +260,14 @@ export const useCameraPathsStore = create<CameraPathsState>()((set) => ({
   setZoomFactor: (value: number) =>
     set(() => ({
       zoomFactor: Math.min(1, Math.max(0, value)),
+    })),
+  setLookAheadBias: (value: number) =>
+    set(() => ({
+      lookAheadBias: Math.min(1, Math.max(0, value)),
+    })),
+  setSpeedMultiplier: (value: number) =>
+    set(() => ({
+      speedMultiplier: Math.min(10, Math.max(0.1, value)),
     })),
 
   // Persistence

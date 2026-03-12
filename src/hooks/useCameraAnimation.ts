@@ -1,10 +1,16 @@
-import { useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback, useMemo, useEffect } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useActivePath, useCameraPathsStore } from "../stores/cameraPathsStore";
+import type { Vec3 } from "../utils/cameraViews";
 
 interface UseCameraAnimationOptions {
   enabled?: boolean;
+}
+
+export interface PathPose {
+  position: Vec3;
+  target: Vec3;
 }
 
 export function useCameraAnimation({
@@ -15,11 +21,15 @@ export function useCameraAnimation({
   const activePath = useActivePath();
   const zoomFactor = useCameraPathsStore((s) => s.zoomFactor);
   const targetZoomFactor = useCameraPathsStore((s) => s.targetZoomFactor);
+  const lookAheadBias = useCameraPathsStore((s) => s.lookAheadBias);
+  const speedMultiplier = useCameraPathsStore((s) => s.speedMultiplier);
   const setZoomFactor = useCameraPathsStore((s) => s.setZoomFactor);
 
   // Initial position
   const initialPosition = useRef(new THREE.Vector3(7, 5, 7));
   const initialTarget = useRef(new THREE.Vector3(0, 0, 0));
+  const currentLookAtRef = useRef<THREE.Vector3 | null>(null);
+  const itemOrientationEnabledRef = useRef(false);
 
   // Create curve from waypoints
   const curve = useMemo(() => {
@@ -55,7 +65,61 @@ export function useCameraAnimation({
     progressRef.current = 0;
     camera.position.copy(initialPosition.current);
     camera.lookAt(initialTarget.current);
+    if (!currentLookAtRef.current) {
+      currentLookAtRef.current = new THREE.Vector3();
+    }
+    currentLookAtRef.current.copy(initialTarget.current);
   }, [camera]);
+
+  const setProgress = useCallback((value: number) => {
+    progressRef.current = Math.min(1, Math.max(0, value));
+  }, []);
+
+  const getPoseAtProgress = useCallback(
+    (progress: number): PathPose | null => {
+      if (!curve || !lookAtCurve || !activePath) return null;
+
+      const clampedProgress = Math.min(1, Math.max(0, progress));
+      const basePosition = curve.getPoint(clampedProgress);
+      const lookAt = lookAtCurve.getPoint(clampedProgress);
+
+      const lookAheadStep = 0.02;
+      let lookAheadT = clampedProgress + lookAheadStep;
+      if (lookAheadT > 1) {
+        lookAheadT = activePath.loop ? lookAheadT - 1 : 1;
+      }
+      const movementLookAt = curve.getPoint(lookAheadT);
+      const orientationBias = itemOrientationEnabledRef.current
+        ? 1
+        : lookAheadBias;
+      const effectiveLookAt = lookAt
+        .clone()
+        .lerp(movementLookAt, orientationBias);
+
+      const offset = new THREE.Vector3().subVectors(basePosition, lookAt);
+      const baseDistance = offset.length() || 1;
+      offset.normalize();
+
+      const farMultiplier = 2.5;
+      const distanceMultiplier = 1 + zoomFactor * (farMultiplier - 1);
+
+      offset.multiplyScalar(baseDistance * distanceMultiplier);
+      const finalPosition = new THREE.Vector3().addVectors(lookAt, offset);
+
+      return {
+        position: [finalPosition.x, finalPosition.y, finalPosition.z],
+        target: [effectiveLookAt.x, effectiveLookAt.y, effectiveLookAt.z],
+      };
+    },
+    [activePath, curve, lookAheadBias, lookAtCurve, zoomFactor],
+  );
+
+  // Ensure the camera starts from the path's initial pose on mount
+  useEffect(() => {
+    reset();
+    // We only want this once on mount for the current camera
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useFrame((_, delta) => {
     if (!enabled || !curve || !lookAtCurve || !activePath) return;
@@ -74,7 +138,7 @@ export function useCameraAnimation({
       setZoomFactor(next);
     }
 
-    const speed = activePath.speed;
+    const speed = Math.min(1, Math.max(0.0001, activePath.speed * speedMultiplier));
     progressRef.current += speed * delta;
 
     if (progressRef.current > 1) {
@@ -86,26 +150,26 @@ export function useCameraAnimation({
       }
     }
 
-    // Get base position and lookAt from curves
-    const basePosition = curve.getPoint(progressRef.current);
-    const lookAt = lookAtCurve.getPoint(progressRef.current);
+    const pose = getPoseAtProgress(progressRef.current);
+    if (!pose) return;
+    const effectiveLookAt = new THREE.Vector3(...pose.target);
 
-    // Compute an offset vector from lookAt to camera and scale it with zoomFactor
-    const offset = new THREE.Vector3().subVectors(basePosition, lookAt);
-    const baseDistance = offset.length() || 1;
-    offset.normalize();
-
-    // When zoomFactor = 0 → original distance
-    // When zoomFactor = 1 → farther away by this multiplier
-    const farMultiplier = 2.5;
-    const distanceMultiplier = 1 + zoomFactor * (farMultiplier - 1);
-
-    offset.multiplyScalar(baseDistance * distanceMultiplier);
-    const finalPosition = new THREE.Vector3().addVectors(lookAt, offset);
-
-    camera.position.copy(finalPosition);
-    camera.lookAt(lookAt);
+    if (!currentLookAtRef.current) {
+      currentLookAtRef.current = new THREE.Vector3();
+    }
+    currentLookAtRef.current.copy(effectiveLookAt);
+    camera.position.set(pose.position[0], pose.position[1], pose.position[2]);
+    camera.lookAt(effectiveLookAt);
   });
 
-  return { reset, progress: progressRef };
+  return {
+    reset,
+    progress: progressRef,
+    currentLookAtRef,
+    setProgress,
+    getPoseAtProgress,
+    setItemOrientationMode: (enabledMode: boolean) => {
+      itemOrientationEnabledRef.current = enabledMode;
+    },
+  };
 }

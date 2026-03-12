@@ -1,14 +1,15 @@
 import type { CSSProperties } from "react";
-import { PathSelector } from "./PathSelector";
-import { useActivePath, useCameraPathsStore } from "../stores/cameraPathsStore";
-import { useVisibleItemsStore } from "../stores/visibleItemsStore";
+import { useCameraPathsStore } from "../stores/cameraPathsStore";
 
 interface UIOverlayProps {
   onSearch: () => void;
   onCurationSelected: () => void;
   onItemSelected1: () => void;
   onItemSelected2: () => void;
-  onToggleEditing: () => void;
+  onItemSelected3: () => void;
+  onItemSelected4: () => void;
+  onItemSelected5: () => void;
+  onItemSelected6: () => void;
 }
 
 export function UIOverlay({
@@ -16,34 +17,37 @@ export function UIOverlay({
   onCurationSelected,
   onItemSelected1,
   onItemSelected2,
-  onToggleEditing,
+  onItemSelected3,
+  onItemSelected4,
+  onItemSelected5,
+  onItemSelected6,
 }: UIOverlayProps) {
   const isEditing = useCameraPathsStore((s) => s.isEditing);
-  const visibleIds = useVisibleItemsStore((s) => s.visibleIds);
-  const activePath = useActivePath();
+  // const visibleIds = useVisibleItemsStore((s) => s.visibleIds);
+  // const activePath = useActivePath();
 
-  const handleExportPath = () => {
-    if (!activePath) return;
+  // const handleExportPath = () => {
+  //   if (!activePath) return;
 
-    const data = {
-      id: activePath.id,
-      name: activePath.name,
-      speed: activePath.speed,
-      loop: activePath.loop,
-      waypoints: activePath.waypoints,
-    };
+  //   const data = {
+  //     id: activePath.id,
+  //     name: activePath.name,
+  //     speed: activePath.speed,
+  //     loop: activePath.loop,
+  //     waypoints: activePath.waypoints,
+  //   };
 
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+  //   const json = JSON.stringify(data, null, 2);
+  //   const blob = new Blob([json], { type: "application/json" });
+  //   const url = URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${activePath.name || "camera-path"}.json`;
-    a.click();
+  //   const a = document.createElement("a");
+  //   a.href = url;
+  //   a.download = `${activePath.name || "camera-path"}.json`;
+  //   a.click();
 
-    URL.revokeObjectURL(url);
-  };
+  //   URL.revokeObjectURL(url);
+  // };
 
   return (
     <div style={overlayStyle}>
@@ -83,10 +87,42 @@ export function UIOverlay({
         >
           ITEM SELECTED 2
         </button>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onItemSelected3}
+          aria-label="Focus camera on third selected item"
+        >
+          ITEM SELECTED 3
+        </button>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onItemSelected4}
+          aria-label="Focus camera on fourth selected item"
+        >
+          ITEM SELECTED 4
+        </button>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onItemSelected5}
+          aria-label="Focus camera on fifth selected item"
+        >
+          ITEM SELECTED 5
+        </button>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onItemSelected6}
+          aria-label="Focus camera on sixth selected item"
+        >
+          ITEM SELECTED 6
+        </button>
       </div>
 
       <div style={sectionStyle}>
-        <button
+        {/* <button
           style={buttonStyle}
           type="button"
           onClick={onToggleEditing}
@@ -98,8 +134,8 @@ export function UIOverlay({
           }
         >
           {isEditing ? "DONE EDITING PATH" : "EDIT CAMERA PATH"}
-        </button>
-        <button
+        </button> */}
+        {/* <button
           style={buttonStyle}
           type="button"
           onClick={handleExportPath}
@@ -107,7 +143,7 @@ export function UIOverlay({
           aria-label="Export current camera path as JSON"
         >
           EXPORT CAMERA PATH JSON
-        </button>
+        </button> */}
       </div>
       {/*
       <div style={sectionStyle}>
@@ -119,13 +155,13 @@ export function UIOverlay({
         </button>
       </div>  */}
 
-      <PathSelector isEditing={isEditing} />
-
+      {/* <PathSelector isEditing={isEditing} /> */}
+      {/* 
       {visibleIds.length > 0 && (
         <div style={visibleListStyle} aria-live="polite">
           <strong>Visible IDs:</strong> <span>{visibleIds.join(", ")}</span>
         </div>
-      )}
+      )} */}
 
       {isEditing && (
         <div style={instructionsStyle}>
@@ -179,16 +215,4 @@ const instructionsStyle: CSSProperties = {
   fontSize: "12px",
   lineHeight: "1.5",
   maxWidth: "200px",
-};
-
-const visibleListStyle: CSSProperties = {
-  marginTop: "8px",
-  padding: "8px 10px",
-  background: "rgba(0,0,0,0.65)",
-  color: "white",
-  borderRadius: "8px",
-  fontSize: "11px",
-  lineHeight: 1.4,
-  maxWidth: "260px",
-  wordWrap: "break-word",
 };

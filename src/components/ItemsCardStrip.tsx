@@ -53,10 +53,12 @@ export function ItemsCardStrip() {
                   loading="lazy"
                 />
               )}
-              {/* <div style={cardBodyStyle}>
-                <h3 style={titleStyle}>{item.preferredLabel}</h3>
-                <p style={metaStyle}>{item.year && <span>{item.year}</span>}</p>
-              </div> */}
+              <div>
+                <h3 style={{ fontSize: 11 }}>{item.preferredLabel}</h3>
+                <p style={{ fontSize: 10 }}>
+                  {item.year && <span>{item.year}</span>}
+                </p>
+              </div>
             </article>
           );
         })}

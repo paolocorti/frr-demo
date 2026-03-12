@@ -17,6 +17,7 @@ export interface MediaItem {
 
 export interface DataItem {
   id: number;
+  type?: string;
   preferredLabel?: string;
   detailsTitle?: string;
   year?: string;
