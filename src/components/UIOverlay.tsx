@@ -58,7 +58,7 @@ export function UIOverlay({
           onClick={onSearch}
           aria-label="Trigger search camera path"
         >
-          SEARCH BEGINES
+          SEARCH START
         </button>
         <button
           style={buttonStyle}
