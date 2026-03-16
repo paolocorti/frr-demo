@@ -62,7 +62,8 @@ function App() {
 
   const handleStart = useCallback(() => {
     clearSelection();
-    setZoomTarget(1);
+    // Keep the camera close when START begins, matching the end transition framing.
+    //setZoomTarget(0);
     setLookAheadBias(0);
     setSpeedMultiplier(1);
     setStarted(true);
@@ -226,7 +227,7 @@ function App() {
         onItemSelected6={() => handleItemSelected(5)}
         //onToggleEditing={handleToggleEditing}
       />
-      {started && <ItemsCardStrip />}
+      <ItemsCardStrip isStarted={started} />
     </div>
   );
 }

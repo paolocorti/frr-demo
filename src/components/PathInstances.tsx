@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Instances, Instance, Billboard } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
@@ -91,10 +91,7 @@ export function PathInstances({ isStarted }: { isStarted: boolean }) {
   const projScreenMatrix = useRef(new THREE.Matrix4());
   const lastVisibleKey = useRef<string>("");
 
-  const instanceCount = useMemo(
-    () => Math.max(2, items.length || 0),
-    [items.length],
-  );
+  const instanceCount = useMemo(() => items.length, [items.length]);
 
   const { curve } = useSvgPath();
 
@@ -103,9 +100,16 @@ export function PathInstances({ isStarted }: { isStarted: boolean }) {
     [curve, instanceCount],
   );
 
+  useEffect(() => {
+    if (instanceCount === 0) {
+      lastVisibleKey.current = "";
+      setVisibleIds([]);
+    }
+  }, [instanceCount, setVisibleIds]);
+
   // Update list of items roughly inside the camera frustum
-  const MAX_VISIBLE = 15;
-  const MAX_DISTANCE = 10; // world units from camera
+  const MAX_VISIBLE = isStarted ? 15 : 100;
+  const MAX_DISTANCE = isStarted ? 10 : 50; // world units from camera
 
   useFrame(() => {
     if (!items.length || !transforms.length) return;
@@ -268,9 +272,18 @@ export function PathInstances({ isStarted }: { isStarted: boolean }) {
     return markers;
   }, [items, transforms]);
 
+  if (instanceCount === 0) {
+    return null;
+  }
+
   return (
     <>
-      <Instances limit={instanceCount} frustumCulled={false}>
+      <Instances
+        key={`main-layer-${instanceCount}`}
+        limit={instanceCount}
+        range={instanceCount}
+        frustumCulled={false}
+      >
         <boxGeometry
           args={[
             RECTANGLE_SIZE.width,
@@ -290,7 +303,12 @@ export function PathInstances({ isStarted }: { isStarted: boolean }) {
         ))}
       </Instances>
 
-      <Instances limit={instanceCount} frustumCulled={false}>
+      <Instances
+        key={`left-flag-layer-${instanceCount}`}
+        limit={instanceCount}
+        range={instanceCount}
+        frustumCulled={false}
+      >
         <boxGeometry args={FLAG_SIZE} />
         <meshStandardMaterial color={"#ffffff"} side={THREE.DoubleSide} />
         {instances.map((instance) => (
@@ -304,7 +322,12 @@ export function PathInstances({ isStarted }: { isStarted: boolean }) {
         ))}
       </Instances>
 
-      <Instances limit={instanceCount} frustumCulled={false}>
+      <Instances
+        key={`right-flag-layer-${instanceCount}`}
+        limit={instanceCount}
+        range={instanceCount}
+        frustumCulled={false}
+      >
         <boxGeometry args={FLAG_SIZE} />
         <meshStandardMaterial color={"#ffffff"} side={THREE.DoubleSide} />
         {instances.map((instance) => (

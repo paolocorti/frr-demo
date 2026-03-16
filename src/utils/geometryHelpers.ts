@@ -10,11 +10,15 @@ export function calculateInstanceTransforms(
   curve: THREE.CatmullRomCurve3,
   count: number
 ): InstanceTransform[] {
+  if (count <= 0) {
+    return [];
+  }
+
   const transforms: InstanceTransform[] = [];
   const dummy = new THREE.Object3D();
 
   for (let i = 0; i < count; i++) {
-    const t = i / (count - 1);
+    const t = count === 1 ? 0 : i / (count - 1);
     const position = curve.getPoint(t);
     const tangent = curve.getTangent(t);
 
