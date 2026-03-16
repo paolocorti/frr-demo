@@ -81,7 +81,7 @@ type YearStartMarkerData = {
   color: THREE.Color;
 };
 
-export function PathInstances() {
+export function PathInstances({ isStarted }: { isStarted: boolean }) {
   const items = useDataItems();
   const selectedIndices = useSelectionStore((s) => s.selectedIndices);
   const setVisibleIds = useVisibleItemsStore((s) => s.setVisibleIds);
@@ -328,7 +328,7 @@ export function PathInstances() {
           ]}
         >
           <Text
-            fontSize={0.03}
+            fontSize={isStarted ? 0.03 : 0.12}
             color="#ffffff"
             anchorX="center"
             anchorY="bottom"

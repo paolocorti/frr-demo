@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { useCameraPathsStore } from "../stores/cameraPathsStore";
 
 interface UIOverlayProps {
+  onStart: () => void;
   onSearch: () => void;
   onCurationSelected: () => void;
   onItemSelected1: () => void;
@@ -13,6 +14,7 @@ interface UIOverlayProps {
 }
 
 export function UIOverlay({
+  onStart,
   onSearch,
   onCurationSelected,
   onItemSelected1,
@@ -52,6 +54,14 @@ export function UIOverlay({
   return (
     <div style={overlayStyle}>
       <div style={sectionStyle}>
+        <button
+          style={buttonStyle}
+          type="button"
+          onClick={onStart}
+          aria-label="Trigger search camera path"
+        >
+          START
+        </button>
         <button
           style={buttonStyle}
           type="button"

@@ -1,4 +1,10 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { CameraControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -25,29 +31,40 @@ export interface CameraControllerRef {
   setItemOrientationMode: (enabled: boolean) => void;
   setView: (position: Vec3, target: Vec3) => void;
   setPathProgress: (progress: number) => void;
+  startTransitionToCurrentPath: (duration?: number) => boolean;
   getPathPoseAtProgress: (
     progress: number,
   ) => { position: Vec3; target: Vec3 } | null;
-  startTransitionToPathProgress: (progress: number, duration?: number) => boolean;
+  startTransitionToPathProgress: (
+    progress: number,
+    duration?: number,
+  ) => boolean;
   startTransition: (position: Vec3, target: Vec3, duration?: number) => void;
 }
 
 interface CameraControllerProps {
   isAnimating: boolean;
+  enableIdleMotion?: boolean;
 }
 
 export const CameraController = forwardRef<
   CameraControllerRef,
   CameraControllerProps
->(function CameraController({ isAnimating }, ref) {
+>(function CameraController({ isAnimating, enableIdleMotion = false }, ref) {
   const { camera } = useThree();
   const transitionRef = useRef<TransitionState | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const controlsRef = useRef<CameraControlsImpl | null>(null);
+  const idleTimeRef = useRef(0);
+  const idleBasePoseRef = useRef<{
+    position: THREE.Vector3;
+    target: THREE.Vector3;
+  } | null>(null);
   const {
     reset: resetCamera,
     currentLookAtRef,
     setProgress,
+    getProgress,
     getPoseAtProgress,
     setItemOrientationMode,
   } = useCameraAnimation({
@@ -123,6 +140,56 @@ export const CameraController = forwardRef<
       return;
     }
 
+    if (enableIdleMotion && !isAnimating && !isTransitioning) {
+      if (!idleBasePoseRef.current) {
+        const controlsTarget = new THREE.Vector3();
+        if (controlsRef.current?.getTarget) {
+          controlsRef.current.getTarget(controlsTarget);
+        } else if (currentLookAtRef.current) {
+          controlsTarget.copy(currentLookAtRef.current);
+        } else {
+          controlsTarget.set(0, 0, 0);
+        }
+
+        idleBasePoseRef.current = {
+          position: camera.position.clone(),
+          target: controlsTarget.clone(),
+        };
+      }
+
+      idleTimeRef.current += delta;
+
+      const t = idleTimeRef.current;
+      const bobX = Math.sin(t * 0.35) * 0.06 * 10;
+      const bobY = Math.sin(t * 0.6) * 0.03 * 10;
+      const bobZ = Math.cos(t * 0.28) * 0.05 * 10;
+      const targetNudgeY = Math.sin(t * 0.5) * 0.015;
+
+      const basePose = idleBasePoseRef.current;
+      const position = basePose.position
+        .clone()
+        .add(new THREE.Vector3(bobX, bobY, bobZ));
+      const target = basePose.target
+        .clone()
+        .add(new THREE.Vector3(0, targetNudgeY, 0));
+
+      camera.position.copy(position);
+      camera.lookAt(target);
+      controlsRef.current?.setLookAt(
+        position.x,
+        position.y,
+        position.z,
+        target.x,
+        target.y,
+        target.z,
+        false,
+      );
+      return;
+    }
+
+    idleTimeRef.current = 0;
+    idleBasePoseRef.current = null;
+
     if (isAnimating && currentLookAtRef.current && controlsRef.current) {
       controlsRef.current.setLookAt(
         camera.position.x,
@@ -162,6 +229,45 @@ export const CameraController = forwardRef<
     },
     setPathProgress: (progress) => {
       setProgress(progress);
+    },
+    startTransitionToCurrentPath: (duration = 1) => {
+      const progress = getProgress();
+      const pathPose = getPoseAtProgress(progress);
+      if (!pathPose) return false;
+      setIsTransitioning(true);
+
+      const fromPos: Vec3 = [
+        camera.position.x,
+        camera.position.y,
+        camera.position.z,
+      ];
+      let fromTarget: Vec3;
+      const controlsTarget = new THREE.Vector3();
+      if (controlsRef.current?.getTarget) {
+        controlsRef.current.getTarget(controlsTarget);
+        fromTarget = [controlsTarget.x, controlsTarget.y, controlsTarget.z];
+      } else if (currentLookAtRef?.current) {
+        fromTarget = [
+          currentLookAtRef.current.x,
+          currentLookAtRef.current.y,
+          currentLookAtRef.current.z,
+        ];
+      } else {
+        const direction = camera.getWorldDirection(new THREE.Vector3());
+        const currentTarget = direction.clone().add(camera.position);
+        fromTarget = [currentTarget.x, currentTarget.y, currentTarget.z];
+      }
+
+      transitionRef.current = {
+        active: true,
+        elapsed: 0,
+        duration,
+        fromPos,
+        fromTarget,
+        toPos: pathPose.position,
+        toTarget: pathPose.target,
+      };
+      return true;
     },
     getPathPoseAtProgress: (progress) => getPoseAtProgress(progress),
     startTransitionToPathProgress: (progress, duration = 1) => {
@@ -226,11 +332,7 @@ export const CameraController = forwardRef<
         // Fallback: derive from camera direction
         const direction = camera.getWorldDirection(new THREE.Vector3());
         const currentTarget = direction.clone().add(camera.position);
-        fromTarget = [
-          currentTarget.x,
-          currentTarget.y,
-          currentTarget.z,
-        ];
+        fromTarget = [currentTarget.x, currentTarget.y, currentTarget.z];
       }
 
       transitionRef.current = {

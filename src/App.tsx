@@ -18,7 +18,8 @@ const CURATION_IDS = [
 
 function App() {
   const [page, setPage] = useState<"main" | "cameraControlsTest">("main");
-  const [isAnimating, setIsAnimating] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [started, setStarted] = useState(false);
   const cameraControllerRef = useRef<CameraControllerRef | null>(null);
   const resumeTimerRef = useRef<number | null>(null);
   const items = useDataItems();
@@ -59,17 +60,77 @@ function App() {
     };
   }, []);
 
+  const handleStart = useCallback(() => {
+    clearSelection();
+    setZoomTarget(1);
+    setLookAheadBias(0);
+    setSpeedMultiplier(1);
+    setStarted(true);
+
+    // If already following the path, just update mode settings without pausing.
+    if (isAnimating) {
+      return;
+    }
+
+    setIsAnimating(false);
+    if (resumeTimerRef.current != null) {
+      window.clearTimeout(resumeTimerRef.current);
+    }
+
+    const transitionDurationMs = 1400;
+    const transitionDurationSec = transitionDurationMs / 1000;
+    const startedTransition =
+      cameraControllerRef.current?.startTransitionToCurrentPath(
+        transitionDurationSec,
+      );
+    if (startedTransition) {
+      resumeTimerRef.current = window.setTimeout(() => {
+        setIsAnimating(true);
+      }, transitionDurationMs);
+    } else {
+      setIsAnimating(true);
+    }
+  }, [
+    clearSelection,
+    isAnimating,
+    setLookAheadBias,
+    setSpeedMultiplier,
+    setZoomTarget,
+  ]);
+
   const handleSearch = useCallback(() => {
     clearSelection();
-    // Zoom out along the current active path
     setZoomTarget(1);
     setLookAheadBias(0);
     setSpeedMultiplier(2.5);
     cameraControllerRef.current?.setItemOrientationMode(false);
-    // Restart animation from beginning
-    setIsAnimating(true);
-    cameraControllerRef.current?.reset();
-  }, [clearSelection, setLookAheadBias, setSpeedMultiplier, setZoomTarget]);
+
+    // If already following the path, apply new speed/bias immediately.
+    if (isAnimating) {
+      return;
+    }
+
+    // Do not reset: blend from current camera view to current path-follow pose
+    setIsAnimating(false);
+    if (resumeTimerRef.current != null) {
+      window.clearTimeout(resumeTimerRef.current);
+    }
+    const started =
+      cameraControllerRef.current?.startTransitionToCurrentPath(1.4);
+    if (started) {
+      resumeTimerRef.current = window.setTimeout(() => {
+        setIsAnimating(true);
+      }, 1400);
+    } else {
+      setIsAnimating(true);
+    }
+  }, [
+    clearSelection,
+    isAnimating,
+    setLookAheadBias,
+    setSpeedMultiplier,
+    setZoomTarget,
+  ]);
 
   const handleCurationSelected = useCallback(() => {
     setIsAnimating(false);
@@ -147,21 +208,14 @@ function App() {
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      {/* <button
-        type="button"
-        onClick={() => setPage("cameraControlsTest")}
-        aria-label="Open CameraControls test page"
-        aria-pressed={false}
-        style={testPageButtonStyle}
-      >
-        CAMERA CONTROLS TEST
-      </button> */}
-
       <Scene
+        isStarted={started}
         isAnimating={isAnimating}
+        enableIdleMotion={!started}
         cameraControllerRef={cameraControllerRef}
       />
       <UIOverlay
+        onStart={handleStart}
         onSearch={handleSearch}
         onCurationSelected={handleCurationSelected}
         onItemSelected1={() => handleItemSelected(0)}
@@ -172,7 +226,7 @@ function App() {
         onItemSelected6={() => handleItemSelected(5)}
         //onToggleEditing={handleToggleEditing}
       />
-      <ItemsCardStrip />
+      {started && <ItemsCardStrip />}
     </div>
   );
 }

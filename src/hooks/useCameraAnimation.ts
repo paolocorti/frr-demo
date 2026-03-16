@@ -36,13 +36,13 @@ export function useCameraAnimation({
     if (!activePath || activePath.waypoints.length < 2) return null;
 
     const points = activePath.waypoints.map(
-      (w) => new THREE.Vector3(...w.position)
+      (w) => new THREE.Vector3(...w.position),
     );
     return new THREE.CatmullRomCurve3(
       points,
       activePath.loop,
       "catmullrom",
-      0.5
+      0.5,
     );
   }, [activePath]);
 
@@ -51,13 +51,13 @@ export function useCameraAnimation({
     if (!activePath || activePath.waypoints.length < 2) return null;
 
     const points = activePath.waypoints.map(
-      (w) => new THREE.Vector3(...w.lookAt)
+      (w) => new THREE.Vector3(...w.lookAt),
     );
     return new THREE.CatmullRomCurve3(
       points,
       activePath.loop,
       "catmullrom",
-      0.5
+      0.5,
     );
   }, [activePath]);
 
@@ -74,6 +74,8 @@ export function useCameraAnimation({
   const setProgress = useCallback((value: number) => {
     progressRef.current = Math.min(1, Math.max(0, value));
   }, []);
+
+  const getProgress = useCallback(() => progressRef.current, []);
 
   const getPoseAtProgress = useCallback(
     (progress: number): PathPose | null => {
@@ -105,6 +107,11 @@ export function useCameraAnimation({
 
       offset.multiplyScalar(baseDistance * distanceMultiplier);
       const finalPosition = new THREE.Vector3().addVectors(lookAt, offset);
+
+      // Lower camera in Item Selected mode only
+      if (itemOrientationEnabledRef.current) {
+        finalPosition.y -= 0.1; // tune this value
+      }
 
       return {
         position: [finalPosition.x, finalPosition.y, finalPosition.z],
@@ -138,7 +145,10 @@ export function useCameraAnimation({
       setZoomFactor(next);
     }
 
-    const speed = Math.min(1, Math.max(0.0001, activePath.speed * speedMultiplier));
+    const speed = Math.min(
+      1,
+      Math.max(0.0001, activePath.speed * speedMultiplier),
+    );
     progressRef.current += speed * delta;
 
     if (progressRef.current > 1) {
@@ -167,6 +177,7 @@ export function useCameraAnimation({
     progress: progressRef,
     currentLookAtRef,
     setProgress,
+    getProgress,
     getPoseAtProgress,
     setItemOrientationMode: (enabledMode: boolean) => {
       itemOrientationEnabledRef.current = enabledMode;

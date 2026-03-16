@@ -12,7 +12,7 @@ export const getOverviewView = (): CameraView => ({
 
 export const getCurationView = (): CameraView => ({
   // Tuned for a closer, more focused framing on the central area
-  position: [0.5, 1, 3],
+  position: [0.5, 1, 6],
   target: [0.3, 0.4, 0],
 });
 
