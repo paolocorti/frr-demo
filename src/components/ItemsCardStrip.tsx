@@ -72,9 +72,7 @@ export function ItemsCardStrip({ isStarted }: { isStarted: boolean }) {
           );
           const emphasis = 1 - normalizedDistance;
           const cardWidth = isStarted ? 95 + emphasis * 90 : 12 + emphasis * 14;
-          const cardHeight = isStarted
-            ? 130 + emphasis * 70
-            : 40 + emphasis * 16;
+          const cardHeight = isStarted ? 150 : 60;
           const overlapOffset = isStarted ? -18 : -6;
           const zIndex = Math.round(20 + emphasis * 100);
 
@@ -86,12 +84,15 @@ export function ItemsCardStrip({ isStarted }: { isStarted: boolean }) {
                 ...visibleCardStyle,
                 width: cardWidth,
                 height: cardHeight,
+                backgroundColor: isStarted
+                  ? "rgba(10,10,10,0.95)"
+                  : `${colorType[item.type as keyof typeof colorType]}`,
                 borderLeft: `${isStarted ? 8 : 3}px solid ${colorType[item.type as keyof typeof colorType]}`,
                 borderRight: `${isStarted ? 8 : 3}px solid ${colorType[item.type as keyof typeof colorType]}`,
                 zIndex,
                 marginLeft: index === 0 ? 0 : overlapOffset,
-                transform: `scale(${isStarted ? 0.8 + emphasis * 0.2 : 0.86 + emphasis * 0.14})`,
-                transformOrigin: "bottom center",
+                //transform: `scale(${isStarted ? 0.8 + emphasis * 0.2 : 0.86 + emphasis * 0.14})`,
+                //transformOrigin: "bottom center",
               }}
               aria-label={item.detailsTitle ?? item.preferredLabel}
             >
@@ -136,7 +137,7 @@ const stripContainerStyle: CSSProperties = {
 
 const stripInnerStyle: CSSProperties = {
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-end",
   overflowX: "auto",
   paddingBottom: 4,
   paddingLeft: 8,
@@ -145,12 +146,11 @@ const stripInnerStyle: CSSProperties = {
 
 const cardStyle: CSSProperties = {
   maxWidth: 240,
-  backgroundColor: "rgba(10,10,10,0.95)",
   aspectRatio: 9 / 16,
   padding: "8px",
   overflow: "hidden",
   border: "1px solid rgba(255,255,255,0.08)",
-  boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+  boxShadow: "0 8px 6px rgba(0,0,0,0.6)",
   color: "#f5f5f5",
   display: "flex",
   flexDirection: "column",
@@ -162,7 +162,7 @@ const visibleCardStyle: CSSProperties = {
 };
 
 const imageStyle: CSSProperties = {
-  width: "70%",
+  height: "100px",
   margin: "0 auto",
   objectFit: "cover",
   display: "block",
